@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 import torch
 import numpy as np
 import abc
-from typing import NamedTuple, Callable
+from typing import NamedTuple, Callable, Iterable
 import torchmetrics
 from pytorch_lightning.utilities.types import OptimizerLRScheduler
 import pandas as pd
@@ -17,7 +17,7 @@ class CDMInputs(NamedTuple):
 class NonNegClipper:
     """Clips negative values to 0 in all given models (excluding bias)"""
 
-    def __init__(self, module_list: torch.nn.ModuleList | list[torch.nn.Module]):
+    def __init__(self, module_list: Iterable[torch.nn.Module]):
         self.module_list = module_list
 
     def apply(self):

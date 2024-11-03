@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import logging
 import scipy
+from typing import List
 import pandas as pd
 
 
@@ -27,7 +28,7 @@ def count_trainable_parameters(model: torch.nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def compute_confidence_interval(samples: list, confidence=0.95):
+def compute_confidence_interval(samples: List, confidence=0.95):
     """Compute the confidence interval for a list of samples"""
 
     mean = np.mean(samples)
