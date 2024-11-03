@@ -5,6 +5,14 @@ import pandas as pd
 
 
 def get_data(df: pd.DataFrame):
+    """
+    Retrieve all required performance metrics data for cognitive diagnosis
+
+    :param df: dataframe contaning all metrics for all models, and model names
+    :return: (metric names, short metric names, concept names, Q matrix, logs dataframe, graph edges dataframe, graph
+    adjacency matrix)
+    """
+
     perf_metric_names = list(df.columns[1:])
     perf_metric_names_short = [
         'ACC',
@@ -76,12 +84,14 @@ def get_data(df: pd.DataFrame):
 
 
 class CDMLogsDataset(torch.utils.data.Dataset):
-  def __init__(self, df_logs):
-    self.df_logs = df_logs
+    """Logs dataset for training CDM"""
 
-  def __len__(self):
-    return self.df_logs.shape[0]
+    def __init__(self, df_logs):
+        self.df_logs = df_logs
 
-  def __getitem__(self, idx):
-    row = self.df_logs.iloc[idx]
-    return (row['student_id'], row['exercise_id']), row['score']
+    def __len__(self):
+        return self.df_logs.shape[0]
+
+    def __getitem__(self, idx):
+        row = self.df_logs.iloc[idx]
+        return (row['student_id'], row['exercise_id']), row['score']

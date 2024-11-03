@@ -15,6 +15,8 @@ class CDMInputs(NamedTuple):
 
 
 class NonNegClipper:
+    """Clips negative values to 0 in all given models (excluding bias)"""
+
     def __init__(self, module_list: torch.nn.ModuleList | list[torch.nn.Module]):
         self.module_list = module_list
 
@@ -26,20 +28,37 @@ class NonNegClipper:
 
 
 class CDMMixin(abc.ABC):
+    """Abstract base class for all CDM models. Allows retrieval of mastery values and exercise parameters"""
+
     @abc.abstractmethod
     def get_mastery(self, student_idx: torch.LongTensor | None = None) -> np.ndarray:
+        """Return mastery values for given student indices. If none are specified, return for all students"""
+
         pass
 
     @abc.abstractmethod
     def get_diff(self, exercise_idx: torch.LongTensor | None = None) -> np.ndarray:
+        """Return difficulty for given exercise indices. If none are specified, return for all exercises"""
+
         pass
 
     @abc.abstractmethod
     def get_disc(self, exercise_idx: torch.LongTensor | None = None) -> np.ndarray:
+        """Return discrimination for given exercise indices. If none are specified, return for all exercises"""
+
         pass
 
 
 def degree_of_agreement(M: np.ndarray, R: np.ndarray, Q: np.ndarray):
+    """
+    Compute degree of agreement metric for all concepts
+
+    :param M: mastery levels numpy array
+    :param R: responses matrix numpy array
+    :param Q: Q matrix numpy array
+    :return: degree of agreement metric for each concept, numpy array of shape (K,)
+    """
+
     K = Q.shape[1]
     S = M.shape[0]
 
@@ -60,6 +79,15 @@ def degree_of_agreement(M: np.ndarray, R: np.ndarray, Q: np.ndarray):
 
 
 def degree_of_consistency(M: np.ndarray, R: np.ndarray, Q: np.ndarray):
+    """
+    Compute degree of consistency metric for all exercises
+
+    :param M: mastery levels numpy array
+    :param R: responses matrix numpy array
+    :param Q: Q matrix numpy array
+    :return: degree of consistency metric for each exercise, numpy array of shape (E,)
+    """
+
     E = Q.shape[0]
     S = M.shape[0]
 
@@ -80,6 +108,8 @@ def degree_of_consistency(M: np.ndarray, R: np.ndarray, Q: np.ndarray):
 
 
 class CDMDegreeOfAgreementMetric:
+    """Degree of agreement metric for deep learning models"""
+
     def __init__(
             self,
             student_num: int,
@@ -109,6 +139,8 @@ class CDMDegreeOfAgreementMetric:
 
 
 class CDMDegreeOfConsistencyMetric:
+    """Degree of consistency metric for deep learning models"""
+
     def __init__(
             self,
             student_num: int,
@@ -138,6 +170,18 @@ class CDMDegreeOfConsistencyMetric:
 
 
 class MIRT(pl.LightningModule, CDMMixin):
+    """
+    Multidimensional IRT model
+    :param cfg: omegaconf config, containing:
+    - optimizer
+    - - name: pytorch optimizer name
+    - - params: optimizer parameters
+    :param student_num: number of students
+    :param exercise_num: number of exercises
+    :param concept_num: number of concepts
+    :param q_matrix: Q matrix, torch.FloatTensor
+    """
+
     def __init__(
             self,
             cfg,
@@ -230,6 +274,21 @@ class MIRT(pl.LightningModule, CDMMixin):
 
 
 class NeuralCD(pl.LightningModule, CDMMixin):
+    """
+    NeuralCD model
+    :param cfg: omegaconf config, containing:
+    - optimizer
+    - - name: pytorch optimizer name
+    - - params: optimizer parameters
+    - itf_layer1_dim: dimension of first interaction layer
+    - itf_layer2_dim: dimension of second interaction layer
+    :param student_num: number of students
+    :param exercise_num: number of exercises
+    :param concept_num: number of concepts
+    :param q_matrix: Q matrix, torch.FloatTensor
+    """
+
+
     def __init__(
             self,
             cfg,
@@ -340,6 +399,22 @@ class NeuralCD(pl.LightningModule, CDMMixin):
 
 
 class KaNCD(pl.LightningModule, CDMMixin):
+    """
+    Knowledge association NCD model, an extension of NeuralCD
+    :param cfg: omegaconf config, containing:
+    - optimizer
+    - - name: pytorch optimizer name
+    - - params: optimizer parameters
+    - hidden_dim: dimension of student, exercises and concept embeddings
+    - itf_layer1_dim: dimension of first interaction layer
+    - itf_layer2_dim: dimension of second interaction layer
+    - itf_type: interaction function type, one of ['mf', 'gmf', 'ncf1', 'ncf2']
+    :param student_num: number of students
+    :param exercise_num: number of exercises
+    :param concept_num: number of concepts
+    :param q_matrix: Q matrix, torch.FloatTensor
+    """
+
     def __init__(
             self,
             cfg,
@@ -534,6 +609,8 @@ class KaNCD(pl.LightningModule, CDMMixin):
 
 
 class HierCDFLoss(torch.nn.Module):
+    """Loss function for HierCDF, which ensures condi_p > condi_n"""
+
     def __init__(
             self,
             condi_p: torch.nn.Parameter,
@@ -555,6 +632,22 @@ class HierCDFLoss(torch.nn.Module):
 
 
 class HierCDF(pl.LightningModule, CDMMixin):
+    """
+    HierCDF model
+    :param cfg: omegaconf config, containing:
+    - optimizer
+    - - name: pytorch optimizer name
+    - - params: optimizer parameters
+    - hidden_dim: dimension of student and exercise embeddings passed to interation function
+    - itf_type: interaction function type, one of ['mirt', 'ncd']
+    - loss_factor: loss factor for regularization term in HierCDFLoss
+    :param student_num: number of students
+    :param exercise_num: number of exercises
+    :param concept_num: number of concepts
+    :param q_matrix: Q matrix, torch.FloatTensor
+    :param concept_graph: concept graph dataframe, consists of (from, to) rows representing edges
+    """
+
     def __init__(
             self,
             cfg,
@@ -812,6 +905,23 @@ class HierCDF(pl.LightningModule, CDMMixin):
 
 
 class QCCDM(pl.LightningModule, CDMMixin):
+    """
+    QCCDM model
+    :param cfg: omegaconf config, containing:
+    - optimizer
+    - - name: pytorch optimizer name
+    - - params: optimizer parameters
+    - layer_num: number of layers in interaction function
+    - hidden_dim: dimension of student and exercise embeddings passed to interation function
+    - nonlinear_fn_type: nonlinear function type, one of ['sigmoid', 'softplus', 'tanh'], is applied to embeddings
+    - q_matrix_aug_enabled: whether to perform Q-matrix augmentation (bool)
+    :param student_num: number of students
+    :param exercise_num: number of exercises
+    :param concept_num: number of concepts
+    :param concept_graph_adj: concept graph adjacency matrix, torch.FloatTensor
+    :param q_matrix: Q matrix, torch.FloatTensor
+    """
+
     def __init__(
             self,
             cfg,

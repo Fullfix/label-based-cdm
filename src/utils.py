@@ -6,22 +6,30 @@ import pandas as pd
 
 
 def disable_pl_logger():
+    """Disable pytorch lightning logger"""
+
     log = logging.getLogger("pytorch_lightning")
     log.propagate = False
     log.setLevel(logging.ERROR)
 
 
 def enable_pl_logger():
+    """Enable pytorch lightning logger"""
+
     log = logging.getLogger("pytorch_lightning")
     log.propagate = True
     log.setLevel(logging.INFO)
 
 
 def count_trainable_parameters(model: torch.nn.Module) -> int:
+    """Count the number of trainable parameters in a model"""
+
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def compute_confidence_interval(samples, confidence=0.95):
+def compute_confidence_interval(samples: list, confidence=0.95):
+    """Compute the confidence interval for a list of samples"""
+
     mean = np.mean(samples)
     n = len(samples)
     stderr = scipy.stats.sem(samples)
@@ -31,6 +39,8 @@ def compute_confidence_interval(samples, confidence=0.95):
 
 
 def generate_latex_corr_table(df: pd.DataFrame, formatter=None) -> str:
+    """Generate correlation table for copypasting to latex"""
+
     latex_code = r"\begin{tabular}{|c|" + "c|" * len(df.columns) + r"}\hline" + "\n"
 
     latex_code += "       & " + " & ".join(df.columns) + r" \\" + r" \hline" + "\n"
@@ -52,6 +62,8 @@ def generate_latex_corr_table(df: pd.DataFrame, formatter=None) -> str:
 
 
 def generate_latex_table(df: pd.DataFrame, formatter=None) -> str:
+    """Generate table for copypasting to latex"""
+
     latex_code = r"\begin{tabular}{|c|" + "c|" * len(df.columns) + r"}\hline" + "\n"
 
     latex_code += "       & " + " & ".join(df.columns) + r" \\" + r" \hline" + "\n"
